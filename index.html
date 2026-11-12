@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vak Tier List Party</title>
+<meta property="og:title" content="Vak Tier List Party">
+<meta property="og:description" content="Rakd sorba a képeket, mielőtt látnád a következőt. Kattints és szállj be!">
+<meta name="theme-color" content="#17131f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: one column (max 1040px); status bar on top, the current card, then the board as classic S–D tier rows */
+  --bg:#17131f;
+  --surface:#221c2e;
+  --surface2:#2e2641;
+  --line:#3d3354;
+  --text:#f4efe7;
+  --muted:#aba1bf;
+  --accent:#ffd43b;
+  --s:#ff5d6c; --a:#ff9f43; --b:#ffd43b; --c:#5fd38d; --d:#4dabf7;
+  --good:#5fd38d; --bad:#ff5d6c;
+  --display:"Archivo Black","Arial Black",Impact,sans-serif;
+  --body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.5}
+body{min-height:100%}
+#app{max-width:1040px;margin:0 auto;padding:20px 16px 64px;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:clamp(1.7rem,4vw,2.4rem);line-height:1.1}
+h2{font-size:1.35rem}
+h3{font-size:1.05rem}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:.875rem}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--line);padding-bottom:14px}
+.brand{display:flex;flex-direction:column;gap:4px}
+.brand .kicker{font-weight:800;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);font-weight:700;font-size:.85rem;white-space:nowrap}
+.pill.live{border-color:var(--accent);color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grow{flex:1 1 220px}
+label{font-weight:700;font-size:.9rem}
+input[type=text]{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit}
+input[type=text]:focus-visible,button:focus-visible,.slot:focus-visible,.drop:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+button{font:inherit;font-weight:800;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--text);padding:10px 16px}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--accent);color:#1b1526;border-color:var(--accent)}
+button.danger{border-color:var(--bad);color:var(--bad)}
+button.icon{padding:6px 10px;min-width:38px}
+.big{font-size:1.1rem;padding:14px 22px}
+.choice{display:flex;gap:10px;flex-wrap:wrap}
+.choice label{flex:1 1 240px;display:flex;gap:10px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;font-weight:600}
+.choice label.on{border-color:var(--accent)}
+.choice input{margin-top:4px;accent-color:var(--accent)}
+.choice b{display:block}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;cursor:pointer;background:var(--bg)}
+.drop.over{border-color:var(--accent);background:var(--surface2)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.items{display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:auto 64px 1fr auto;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px}
+.item img{width:64px;height:64px;object-fit:cover;border-radius:8px;display:block}
+.rank{font-family:var(--display);min-width:46px;text-align:center;border-radius:8px;padding:4px 6px;color:#1b1526;font-size:.9rem}
+.item .btns{display:flex;gap:4px}
+.notice{border-left:4px solid var(--accent);background:var(--surface2);padding:12px 14px;border-radius:0 10px 10px 0;display:flex;flex-direction:column;gap:6px}
+.notice.err{border-color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:700;font-size:.9rem}
+.chip .bar{width:60px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.chip .bar i{display:block;height:100%;background:var(--accent)}
+.chip.done{border-color:var(--good)}
+.chip.me{outline:2px solid var(--accent);outline-offset:1px}
+.stage{display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:20px;align-items:start}
+@media (max-width:760px){.stage{grid-template-columns:1fr}}
+.now{position:sticky;top:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+@media (max-width:760px){.now{position:static}}
+.now .pic{aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.now .pic img{width:100%;height:100%;object-fit:contain;display:block}
+.now .name{font-family:var(--display);font-size:1.4rem;line-height:1.15;overflow-wrap:anywhere}
+.counter{font-variant-numeric:tabular-nums;font-weight:800;color:var(--accent)}
+.board{display:flex;flex-direction:column;gap:6px}
+.tier{display:grid;grid-template-columns:56px 1fr;border-radius:12px;overflow:hidden;background:var(--bg);border:1px solid var(--line)}
+.tier .lab{font-family:var(--display);font-size:1.6rem;color:#1b1526;display:flex;align-items:center;justify-content:center}
+.tier .slots{display:flex;flex-wrap:wrap;gap:6px;padding:6px}
+.slot{position:relative;width:88px;height:88px;border-radius:10px;border:2px dashed var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;padding:0;color:var(--muted);overflow:hidden}
+.board.sm .slot{width:64px;height:64px}
+.slot .num{position:absolute;top:3px;left:4px;font-weight:800;font-size:.72rem;background:rgba(23,19,31,.78);color:var(--text);border-radius:6px;padding:0 5px;font-variant-numeric:tabular-nums;z-index:1}
+.slot.empty .num{position:static;background:none;font-size:1rem;color:var(--muted)}
+.slot.full{border-style:solid;border-color:transparent}
+.slot img{width:100%;height:100%;object-fit:cover;display:block}
+.slot.pickable{cursor:pointer}
+.slot.pickable:hover{border-color:var(--accent);color:var(--accent)}
+.slot.sel{border:3px solid var(--accent);background:var(--surface2)}
+.slot.sel .num{color:var(--accent)}
+.slot .ghost{position:absolute;inset:0;opacity:.55}
+.slot .ghost img{filter:saturate(.7)}
+.slot .pts{position:absolute;bottom:3px;right:3px;font-weight:800;font-size:.75rem;border-radius:6px;padding:0 6px;color:#1b1526;font-variant-numeric:tabular-nums;z-index:1}
+.slot .cap{position:absolute;left:0;right:0;bottom:0;font-size:.68rem;font-weight:700;background:linear-gradient(transparent,rgba(23,19,31,.9));padding:10px 4px 2px;line-height:1.15;overflow-wrap:anywhere}
+.lead{display:flex;flex-direction:column;gap:6px}
+.lrow{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.lrow.first{border-color:var(--accent);background:var(--surface2)}
+.lrow .pos{font-family:var(--display);font-size:1.4rem;text-align:center}
+.lrow .sc{font-family:var(--display);font-size:1.3rem;font-variant-numeric:tabular-nums;text-align:right}
+.lrow .sub{font-size:.82rem;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;color:var(--muted)}
+.legend b{color:var(--text)}
+.players-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin 0.9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+.center{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:30px 10px}
+ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+</style>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>if(!window.Peer&&location.search.indexOf("test=1")<0)document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');</script>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+"use strict";
+/* ================= alap ================= */
+const $app = document.getElementById("app");
+const PTS = [10,7,4,2,1];
+const TIERS = [["S","var(--s)"],["A","var(--a)"],["B","var(--b)"],["C","var(--c)"],["D","var(--d)"]];
+const MAX_ITEMS = 20;
+const PEER_PREFIX = "vaktierlist-v1-";
+const HOSTPID = "__host__";
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const tierOf = (p, n) => Math.min(4, Math.floor(p * 5 / n));
+const ptsFor = (p, c) => (p < 0 || c == null) ? 0 : (PTS[Math.abs(p - c)] || 0);
+let lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+let lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+const lsDel = k => { try { localStorage.removeItem(k); } catch (e) {} };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const cleanNick = s => String(s || "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 24);
+const rand = (len, chars) => { let s = ""; for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)]; return s; };
+const params = new URLSearchParams(location.search);
+const TEST = params.get("test") === "1";
+const roomParam = (params.get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+
+function dataUrlToBlobUrl(d) {
+  const [head, b64] = d.split(",");
+  const mime = (head.match(/data:([^;]+)/) || [])[1] || "image/jpeg";
+  const bin = atob(b64); const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return URL.createObjectURL(new Blob([arr], { type: mime }));
+}
+async function compress(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    let max = 640, q = 0.8, out = "";
+    for (let t = 0; t < 8; t++) {
+      const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.naturalWidth * sc)); c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+      const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      out = c.toDataURL("image/jpeg", q);
+      if (out.length < 140000) break;
+      q -= 0.12; if (q < 0.5) { max = Math.round(max * 0.75); q = 0.75; }
+    }
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+function shareLink(code) {
+  const u = new URL(location.href); u.search = ""; u.hash = "";
+  u.searchParams.set("room", code); if (TEST) u.searchParams.set("test", "1");
+  return u.toString();
+}
+
+/* ================= kapcsolat (PeerJS, vagy teszt módban BroadcastChannel) ================= */
+function fakeConn(ch, self, other) {
+  const ls = {};
+  return {
+    peer: other,
+    on(ev, fn) { (ls[ev] = ls[ev] || []).push(fn); },
+    _emit(ev, a) { (ls[ev] || []).forEach(f => f(a)); },
+    send(p) { ch.postMessage({ to: other, from: self, kind: "data", payload: p }); },
+    close() { ch.postMessage({ to: other, from: self, kind: "close" }); }
+  };
+}
+function hostTransport(code, h) {
+  if (TEST) {
+    const ch = new BroadcastChannel("vt-" + code), conns = {};
+    ch.onmessage = e => {
+      const m = e.data; if (m.to !== "host") return;
+      if (m.kind === "connect") { const c = fakeConn(ch, "host", m.from); conns[m.from] = c; h.conn(c); ch.postMessage({ to: m.from, from: "host", kind: "accept" }); setTimeout(() => c._emit("open"), 0); }
+      else if (m.kind === "data" && conns[m.from]) conns[m.from]._emit("data", m.payload);
+      else if (m.kind === "close" && conns[m.from]) { conns[m.from]._emit("close"); delete conns[m.from]; }
+    };
+    setTimeout(h.ready, 0);
+    addEventListener("pagehide", () => Object.values(conns).forEach(c => c.close()));
+    return { destroy() { ch.close(); } };
+  }
+  if (!window.Peer) { setTimeout(() => h.error("nolib"), 0); return { destroy() {} }; }
+  let peer = null, dead = false, tries = 0;
+  const start = () => {
+    peer = new window.Peer(PEER_PREFIX + code, { debug: 0 });
+    peer.on("open", () => { tries = 0; h.ready(); });
+    peer.on("connection", c => h.conn(c));
+    peer.on("disconnected", () => { if (!dead) setTimeout(() => { try { peer.reconnect(); } catch (e) {} }, 1500); });
+    peer.on("error", err => {
+      if (err.type === "unavailable-id") {
+        // frissítés után a régi kapcsolat még néhány másodpercig foglalja a kódot
+        if (++tries < 8) { try { peer.destroy(); } catch (e) {} setTimeout(start, 2500); h.error("waitid"); }
+        else h.error("taken");
+      } else if (err.type === "network" || err.type === "server-error" || err.type === "socket-error" || err.type === "socket-closed") h.error("network");
+      else if (err.type === "browser-incompatible") h.error("browser");
+    });
+  };
+  start();
+  return { destroy() { dead = true; try { peer.destroy(); } catch (e) {} } };
+}
+function clientTransport(code, h) {
+  if (TEST) {
+    const me = "c" + rand(8, "abcdefghijk0123456789"), ch = new BroadcastChannel("vt-" + code);
+    const c = fakeConn(ch, me, "host"); let opened = false;
+    ch.onmessage = e => {
+      const m = e.data; if (m.to !== me) return;
+      if (m.kind === "accept") { opened = true; h.open(c); }
+      else if (m.kind === "data") h.data(m.payload);
+      else if (m.kind === "close") h.close();
+    };
+    ch.postMessage({ to: "host", from: me, kind: "connect" });
+    setTimeout(() => { if (!opened) h.error("nohost"); }, 2500);
+    addEventListener("pagehide", () => c.close());
+    return { destroy() { c.close(); ch.close(); } };
+  }
+  if (!window.Peer) { setTimeout(() => h.error("nolib"), 0); return { destroy() {} }; }
+  const peer = new window.Peer({ debug: 0 });
+  let conn = null, opened = false;
+  peer.on("open", () => {
+    conn = peer.connect(PEER_PREFIX + code, { reliable: true });
+    conn.on("open", () => { opened = true; h.open(conn); });
+    conn.on("data", d => h.data(d));
+    conn.on("close", () => h.close());
+    conn.on("error", () => h.close());
+    setTimeout(() => { if (!opened) h.error("timeout"); }, 15000);
+  });
+  peer.on("error", err => {
+    if (err.type === "peer-unavailable") h.error("nohost");
+    else if (err.type === "browser-incompatible") h.error("browser");
+    else if (!opened) h.error("network");
+    else h.close();
+  });
+  addEventListener("pagehide", () => { try { peer.destroy(); } catch (e) {} });
+  return { destroy() { try { peer.destroy(); } catch (e) {} } };
+}
+
+/* ================= közös nézet-elemek ================= */
+function tierLegend() {
+  return '<div class="legend"><span>Pontok képenként:</span><span><b>telitalálat 10</b></span><span>1 hely eltérés <b>7</b></span><span>2 hely <b>4</b></span><span>3 hely <b>2</b></span><span>4 hely <b>1</b></span><span>messzebb <b>0</b></span></div>';
+}
+function boardHTML(o) {
+  // o: n, imgs (index -> {url,name}), place (kép -> hely), correct, pick, sel, ghost, small
+  const n = o.n, posItem = Array(n).fill(-1);
+  (o.place || []).forEach((p, i) => { if (p >= 0) posItem[p] = i; });
+  let h = '<div class="board' + (o.small ? " sm" : "") + '">';
+  for (let t = 0; t < 5; t++) {
+    const ps = []; for (let p = 0; p < n; p++) if (tierOf(p, n) === t) ps.push(p);
+    if (!ps.length) continue;
+    h += '<div class="tier"><div class="lab" style="background:' + TIERS[t][1] + '">' + TIERS[t][0] + '</div><div class="slots">';
+    for (const p of ps) {
+      const it = posItem[p];
+      if (it >= 0) {
+        const im = o.imgs[it];
+        let badge = "";
+        if (o.correct) { const pt = ptsFor(p, o.correct[it]); const col = pt === 10 ? "var(--good)" : pt >= 4 ? "var(--accent)" : pt > 0 ? "var(--a)" : "var(--muted)"; badge = '<span class="pts" style="background:' + col + '">+' + pt + '</span>'; }
+        h += '<div class="slot full" title="' + esc(im ? im.name : "") + '"><span class="num">' + (p + 1) + '</span>' + (im ? '<img src="' + im.url + '" alt="' + esc(im.name) + '">' : '<div class="spinner"></div>') + (o.small ? "" : '<span class="cap">' + esc(im ? im.name : "") + '</span>') + badge + '</div>';
+      } else if (o.pick) {
+        const sel = o.sel === p;
+        const ghost = sel && o.ghost ? '<div class="ghost"><img src="' + o.ghost.url + '" alt=""></div>' : "";
+        h += '<button class="slot empty pickable' + (sel ? " sel" : "") + '" data-act="sel" data-p="' + p + '" aria-label="' + (p + 1) + '. hely">' + ghost + '<span class="num">' + (p + 1) + '</span></button>';
+      } else h += '<div class="slot empty"><span class="num">' + (p + 1) + '</span></div>';
+    }
+    h += '</div></div>';
+  }
+  return h + '</div>';
+}
+function chipsHTML(players, n, showProgress, kick) {
+  if (!players.length) return '<p class="muted">Még senki nem csatlakozott.</p>';
+  return '<div class="chips">' + players.map(p => {
+    const prog = showProgress && n ? '<span class="bar"><i style="width:' + Math.round(100 * (p.progress || 0) / n) + '%"></i></span><span class="small muted">' + (p.progress || 0) + "/" + n + '</span>' : "";
+    const off = p.online ? "" : ' <span class="small muted">(nincs kapcsolat)</span>';
+    const k = kick && p.pid && p.pid !== HOSTPID ? ' <button class="icon danger" style="padding:0 6px;min-width:0" data-act="kick" data-pid="' + esc(p.pid) + '" aria-label="' + esc(p.nick) + ' eltávolítása">✕</button>' : "";
+    return '<span class="chip' + (p.done && showProgress ? " done" : "") + (p.me ? " me" : "") + '">' + esc(p.nick) + prog + (p.done && showProgress ? " ✓" : "") + off + k + '</span>';
+  }).join("") + '</div>';
+}
+function header(title, pills) {
+  return '<header class="top"><div class="brand"><span class="kicker">Vak tier list party</span><h1>' + esc(title || "Rakd sorba, mielőtt látnád a többit") + '</h1></div><div class="row">' + (pills || "") + '</div></header>';
+}
+function phasePill(ph) { return ph ? '<span class="pill live">' + (ph === "setup" ? "Előkészítés" : ph === "playing" ? "Játék folyik" : "Eredmények") + '</span>' : ""; }
+function noteHTML(text, err) { return text ? '<div class="notice' + (err ? " err" : "") + '" role="' + (err ? "alert" : "status") + '"><p>' + esc(text) + '</p></div>' : ""; }
+
+/* Játékos nézet (a távoli játékosnak és a játszó hostnak is) */
+function playHTML(st, imgs, sel, busy) {
+  const n = st.n, place = st.place || Array(n).fill(-1), k = place.indexOf(-1);
+  const players = st.players;
+  if (k < 0) {
+    return '<section class="card"><h2>Kész vagy!</h2><p class="muted">A tier listed le van zárva. Várjuk, hogy a többiek is végezzenek, aztán a játékmester felfedi az eredményt.</p>' + chipsHTML(players, n, true) + '</section>' +
+      '<section class="card"><h3>A te tier listed</h3>' + boardHTML({ n, imgs, place }) + '</section>';
+  }
+  const im = imgs[k];
+  const selOk = sel != null && !place.includes(sel);
+  return '<div class="stage"><aside class="now"><span class="counter">' + (k + 1) + '. kép a ' + n + '-ből</span>' +
+    '<div class="pic">' + (im ? '<img src="' + im.url + '" alt="' + esc(im.name) + '">' : '<div class="spinner"></div>') + '</div>' +
+    '<div class="name">' + esc(im ? im.name : "Kép érkezik…") + '</div>' +
+    '<p class="small muted">Válassz egy üres helyet. Amit leraktál, az már nem mozdul, és a következő képet csak utána látod.</p>' +
+    '<button class="primary big" data-act="place"' + (!selOk || !im || busy ? " disabled" : "") + '>' + (selOk ? "Rögzítés a " + (sel + 1) + ". helyre" : "Válassz helyet") + '</button></aside>' +
+    '<section class="card">' + boardHTML({ n, imgs, place, pick: !!im, sel, ghost: im }) + tierLegend() + '</section></div>' +
+    '<section class="card"><h3>Ki hol tart</h3>' + chipsHTML(players, n, true) + '</section>';
+}
+function revealHTML(st, imgs) {
+  const n = st.n, res = st.results || [], max = n * 10;
+  let h = '<section class="card"><h2>Eredménytábla</h2>';
+  if (!res.length) h += '<p class="muted">Senki nem adott le tier listet.</p>';
+  else {
+    h += '<div class="lead">';
+    let lastScore = null, lastPos = 0;
+    res.forEach((r, i) => {
+      const pos = r.score === lastScore ? lastPos : i + 1; lastScore = r.score; lastPos = pos;
+      h += '<div class="lrow' + (pos === 1 ? " first" : "") + '"><span class="pos">' + pos + '.</span><div><b>' + esc(r.nick) + (r.me ? " (te)" : "") + '</b><div class="sub">' + r.exact + ' telitalálat · ' + r.tierHits + ' jó tier' + (r.done ? "" : " · nem fejezte be") + '</div></div><span class="sc">' + r.score + '<span class="small muted"> / ' + max + '</span></span></div>';
+    });
+    h += '</div>';
+  }
+  h += tierLegend() + '</section>';
+  h += '<section class="card"><div class="row" style="justify-content:space-between"><h2>A tökéletes tier list</h2><span class="pill">' + (st.mode === "host" ? "a játékmester szerint" : "a csapat átlaga szerint") + '</span></div>' + boardHTML({ n, imgs, place: st.correct || [] }) + '</section>';
+  if (res.length) {
+    h += '<section class="card"><h2>Mindenki tier listje</h2><p class="small muted">A sarokban a képre kapott pont.</p><div class="players-results">';
+    res.forEach(r => { h += '<div class="card" style="padding:14px;background:var(--bg)"><div class="row" style="justify-content:space-between"><h3>' + esc(r.nick) + (r.me ? " (te)" : "") + '</h3><b class="counter">' + r.score + ' pont</b></div>' + boardHTML({ n, imgs, place: r.place, correct: st.correct, small: true }) + '</div>'; });
+    h += '</div></section>';
+  }
+  return h;
+}
+
+/* ================= HOST ================= */
+let H = null, HT = null, HU = { sel: null, busy: "", err: "", net: "", confirm: "", dragOver: false, urls: {}, conns: {}, sent: {}, nick: lsGet("vt_nick") || "", saveWarn: false };
+
+function hostSaveKey(code) { return "vt_host_" + code; }
+let saveTimer = null;
+function hostSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const data = JSON.stringify(H);
+    if (!lsSet(hostSaveKey(H.code), data)) {
+      const lite = Object.assign({}, H, { items: [], pres: H.pres.map(p => ({ name: p.name, data: "" })) });
+      lsSet(hostSaveKey(H.code), JSON.stringify(lite)); HU.saveWarn = true;
+    } else HU.saveWarn = false;
+  }, 300);
+}
+function hostUrl(kind, i) {
+  const key = kind + i + "_" + H.gameNo;
+  if (!HU.urls[key]) { const src = kind === "p" ? H.pres[i] : H.items[i]; if (!src || !src.data) return null; HU.urls[key] = { url: dataUrlToBlobUrl(src.data), name: src.name }; }
+  return HU.urls[key];
+}
+function presImgs() { const o = {}; for (let i = 0; i < H.n; i++) { const u = hostUrl("p", i); if (u) o[i] = { url: u.url, name: H.pres[i].name }; } return o; }
+function playerList(forPid) {
+  return Object.entries(H.players).sort((a, b) => (a[1].at || 0) - (b[1].at || 0)).map(([id, q]) => ({
+    pid: forPid === HOSTPID ? id : undefined, nick: q.nick, progress: q.place ? q.place.filter(x => x >= 0).length : 0, done: !!q.done,
+    online: id === HOSTPID ? true : !!HU.conns[id], me: id === forPid
+  }));
+}
+function stateFor(pid) {
+  const p = H.players[pid];
+  const s = { t: "state", phase: H.phase, title: H.title, mode: H.mode, n: H.n, gameNo: H.gameNo, players: playerList(pid).map(x => { delete x.pid; return x; }), place: p ? p.place : null };
+  if (H.phase === "reveal") { s.correct = H.correct; s.results = (H.results || []).map(r => ({ nick: r.nick, score: r.score, exact: r.exact, tierHits: r.tierHits, done: r.done, place: r.place, me: r.pid === pid })); }
+  return s;
+}
+function sendTo(pid) {
+  const c = HU.conns[pid]; if (!c) return;
+  try { c.send(stateFor(pid)); } catch (e) {}
+  // képek: játék közben csak a már lerakottak és az aktuális, a végén mind
+  const p = H.players[pid];
+  let upto = -1;
+  if (H.phase === "playing" && p && p.place) { const k = p.place.indexOf(-1); upto = k < 0 ? H.n - 1 : k; }
+  if (H.phase === "reveal") upto = H.n - 1;
+  const sent = HU.sent[pid] = HU.sent[pid] || {};
+  for (let i = 0; i <= upto; i++) {
+    const key = H.gameNo + ":" + i;
+    if (sent[key] || !H.pres[i] || !H.pres[i].data) continue;
+    sent[key] = true;
+    try { c.send({ t: "img", gameNo: H.gameNo, i, name: H.pres[i].name, data: H.pres[i].data }); } catch (e) {}
+  }
+}
+function broadcast() { Object.keys(HU.conns).forEach(sendTo); hostSave(); render(); }
+
+function hostOnConn(c) {
+  let pid = null;
+  c.on("data", m => {
+    if (!m || typeof m !== "object") return;
+    if (m.t === "hello") {
+      pid = String(m.pid || "").slice(0, 40); if (!pid || pid === HOSTPID) return;
+      const nick = cleanNick(m.nick) || "Játékos";
+      if (HU.conns[pid] && HU.conns[pid] !== c) { try { HU.conns[pid].close(); } catch (e) {} }
+      HU.conns[pid] = c; HU.sent[pid] = {};
+      let p = H.players[pid];
+      if (!p) { p = H.players[pid] = { nick, at: Date.now(), place: H.phase === "playing" ? Array(H.n).fill(-1) : null, done: false }; }
+      p.nick = nick;
+      broadcast();
+    } else if (m.t === "place" && pid && HU.conns[pid] === c) {
+      hostPlace(pid, m.slot);
+    }
+  });
+  const gone = () => { if (pid && HU.conns[pid] === c) { delete HU.conns[pid]; broadcast(); } };
+  c.on("close", gone); c.on("error", gone);
+}
+function hostPlace(pid, slot) {
+  const p = H.players[pid]; slot = Number(slot);
+  if (H.phase !== "playing" || !p || !p.place || !Number.isInteger(slot) || slot < 0 || slot >= H.n || p.place.includes(slot)) { if (HU.conns[pid]) sendTo(pid); return; }
+  const k = p.place.indexOf(-1); if (k < 0) return;
+  p.place[k] = slot; p.done = !p.place.includes(-1);
+  broadcast();
+}
+function hostStartNet() {
+  if (HT) HT.destroy();
+  HU.net = "connecting";
+  HT = hostTransport(H.code, {
+    ready() { HU.net = "ok"; render(); },
+    conn: hostOnConn,
+    error(kind) {
+      HU.net = kind; render();
+    }
+  });
+}
+function hostCreate() {
+  const code = rand(4, CODE_CHARS);
+  H = { code, phase: "setup", title: "", mode: "host", hostPlays: false, items: [], pres: [], n: 0, gameNo: 1, players: {}, correct: null, results: null };
+  lsSet("vt_hostroom", code);
+  history.replaceState(null, "", shareLink(code));
+  hostSave(); hostStartNet(); render();
+}
+function hostRestore(code) {
+  try { H = JSON.parse(lsGet(hostSaveKey(code))); } catch (e) { H = null; }
+  if (!H || H.code !== code) return false;
+  H.items = H.items || []; H.pres = H.pres || [];
+  hostStartNet(); return true;
+}
+async function hostAddFiles(files) {
+  const list = Array.from(files || []).filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|gif|webp|bmp)$/i.test(f.name));
+  if (!list.length) return;
+  HU.err = ""; let bad = 0;
+  for (const f of list) {
+    if (H.items.length >= MAX_ITEMS) { HU.err = "Legfeljebb " + MAX_ITEMS + " képet tölthetsz fel."; break; }
+    HU.busy = "Kép feldolgozása: " + f.name; render();
+    try { const data = await compress(f); H.items.push({ data, name: f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 40) }); }
+    catch (e) { bad++; }
+  }
+  if (bad) HU.err = bad + " fájlt nem tudtam megnyitni. JPG, PNG, WEBP vagy GIF képet tölts fel.";
+  HU.busy = ""; HU.urls = {}; hostSave(); render();
+}
+function hostStart() {
+  const n = H.items.length;
+  if (n < 3) return;
+  if (H.items.some(it => !it.name.trim())) { HU.err = "Minden képnek adj nevet."; render(); return; }
+  if (H.mode === "avg" && H.hostPlays) {
+    const nick = cleanNick(HU.nick); if (!nick) { HU.err = "Ha te is játszol, adj meg becenevet."; render(); return; }
+    lsSet("vt_nick", nick);
+    H.players[HOSTPID] = { nick, at: 0, place: null, done: false };
+  } else delete H.players[HOSTPID];
+  HU.err = "";
+  const order = shuffle([...Array(n).keys()]);
+  H.pres = order.map(si => ({ name: H.items[si].name.trim().slice(0, 40), data: H.items[si].data }));
+  H.correct = H.mode === "host" ? order.slice() : null; // a beállítási sorrend = a helyes sorrend
+  H.n = n; H.items = []; H.gameNo++; H.results = null; HU.urls = {}; HU.sel = null;
+  Object.values(H.players).forEach(p => { p.place = Array(n).fill(-1); p.done = false; });
+  H.phase = "playing";
+  broadcast();
+}
+function hostReveal() {
+  const n = H.n; HU.confirm = "";
+  const subs = Object.entries(H.players).filter(([, p]) => p.place).map(([pid, p]) => ({ pid, nick: p.nick, place: p.place, done: p.done }));
+  let correct = H.correct;
+  if (H.mode === "avg") {
+    const placed = subs.filter(s => s.place.some(p => p >= 0));
+    if (!placed.length) { HU.err = "Még senki nem rakott le egy képet sem, így nincs miből átlagot számolni."; render(); return; }
+    const avg = [...Array(n).keys()].map(i => { const v = placed.map(s => s.place[i]).filter(p => p >= 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : n; });
+    const idx = [...Array(n).keys()].sort((a, b) => avg[a] - avg[b] || a - b);
+    correct = Array(n); idx.forEach((item, pos) => { correct[item] = pos; });
+    H.correct = correct;
+  }
+  H.results = subs.map(s => {
+    let score = 0, exact = 0, tierHits = 0;
+    s.place.forEach((p, i) => { if (p < 0) return; score += ptsFor(p, correct[i]); if (p === correct[i]) exact++; if (tierOf(p, n) === tierOf(correct[i], n)) tierHits++; });
+    return { pid: s.pid, nick: s.nick, place: s.place.slice(), score, exact, tierHits, done: !!s.done };
+  }).sort((a, b) => b.score - a.score || b.exact - a.exact || b.tierHits - a.tierHits);
+  H.phase = "reveal"; HU.err = "";
+  broadcast();
+}
+function hostNewGame() {
+  HU.confirm = "";
+  H.phase = "setup"; H.items = []; H.pres = []; H.n = 0; H.correct = null; H.results = null; H.gameNo++; HU.urls = {};
+  Object.values(H.players).forEach(p => { p.place = null; p.done = false; });
+  broadcast();
+}
+
+function hostNetNote() {
+  const k = HU.net;
+  if (k === "ok") return "";
+  if (k === "connecting") return noteHTML("Szoba megnyitása…");
+  if (k === "waitid") return noteHTML("A szobakód még foglalt az előző megnyitásból, pár másodperc és újra próbálom…");
+  if (k === "taken") return noteHTML("Ez a szobakód most foglalt (talán egy másik lapon nyitva van a játék). Zárd be a másik lapot, vagy kezdj új játékot.", true);
+  if (k === "nolib") return noteHTML("Nem töltött be a kapcsolódási modul (PeerJS). Ellenőrizd a netet, aztán frissítsd az oldalt.", true);
+  if (k === "browser") return noteHTML("Ez a böngésző nem támogatja a közvetlen kapcsolatot. Próbáld Chrome-ban, Edge-ben, Firefoxban vagy Safariban.", true);
+  return noteHTML("Megszakadt a kapcsolat a kapcsolódási szerverrel. Újrapróbálom; ha nem jön helyre, frissítsd az oldalt.", true);
+}
+function shareBox() {
+  const link = shareLink(H.code);
+  const local = location.protocol === "file:";
+  return '<div class="notice"><h3>Küldd el ezt a linket a többieknek</h3>' +
+    '<div class="row"><input type="text" id="sharelink" readonly value="' + esc(link) + '" class="grow"><button data-act="copy">' + (HU.copied ? "Másolva ✓" : "Link másolása") + '</button></div>' +
+    '<p class="small muted">Szobakód: <b class="counter">' + H.code + '</b>. Amíg játszotok, ezt a lapot tartsd nyitva, mert a játék a te böngésződben fut.</p>' +
+    (local ? '<p class="small" style="color:var(--bad)">A fájlt most a saját gépedről nyitottad meg, ezért ezt a linket más nem tudja megnyitni. Töltsd fel a fájlt egy tárhelyre, és onnan nyisd meg.</p>' : "") + '</div>';
+}
+function hostSetupHTML() {
+  const n = H.items.length;
+  let h = '<section class="card"><h2>1. Játék beállítása</h2>' +
+    '<div><label for="title">A tier list témája</label><input type="text" id="title" data-in="title" maxlength="60" placeholder="pl. A legjobb magyar kajak" value="' + esc(H.title) + '"></div>' +
+    '<div class="choice" role="radiogroup">' +
+    '<label class="' + (H.mode === "host" ? "on" : "") + '"><input type="radio" name="mode" data-act="mode" value="host"' + (H.mode === "host" ? " checked" : "") + '><span><b>Én adom meg a helyes sorrendet</b><span class="small muted">Lent a lista sorrendje a megoldás: fent az 1. hely. A játékosok ehhez mérődnek.</span></span></label>' +
+    '<label class="' + (H.mode === "avg" ? "on" : "") + '"><input type="radio" name="mode" data-act="mode" value="avg"' + (H.mode === "avg" ? " checked" : "") + '><span><b>A csapat átlaga a helyes</b><span class="small muted">Az nyer, aki a legjobban eltalálja, mit gondol a társaság. Ilyenkor te is játszhatsz.</span></span></label></div>';
+  if (H.mode === "avg") {
+    h += '<label class="row" style="font-weight:600"><input type="checkbox" id="hostplays" data-act="hostplays"' + (H.hostPlays ? " checked" : "") + ' style="accent-color:var(--accent)"> Én is játszom</label>';
+    if (H.hostPlays) h += '<div><label for="nick-host">A beceneved</label><input type="text" id="nick-host" data-in="hnick" maxlength="24" value="' + esc(HU.nick) + '"></div>';
+  }
+  h += '</section><section class="card"><div class="row" style="justify-content:space-between"><h2>2. Képek (' + n + ')</h2><span class="small muted">10 kép az ideális, legalább 3, legfeljebb ' + MAX_ITEMS + '.</span></div>' +
+    '<label class="drop' + (HU.dragOver ? " over" : "") + '" for="file"><input type="file" id="file" accept="image/*" multiple><b>Húzd ide a képeket, vagy kattints a tallózáshoz</b><span class="small muted">A neveket utána át tudod írni. A játékosok a képeket véletlen sorrendben, egyesével kapják meg.</span></label>';
+  if (n) {
+    h += '<div class="items">';
+    H.items.forEach((it, i) => {
+      const t = tierOf(i, n), u = hostUrl("i", i);
+      const rank = H.mode === "host" ? '<span class="rank" style="background:' + TIERS[t][1] + '">#' + (i + 1) + " " + TIERS[t][0] + '</span>' : '<span class="rank" style="background:var(--surface2);color:var(--muted)">' + (i + 1) + '</span>';
+      h += '<div class="item">' + rank + '<img src="' + (u ? u.url : "") + '" alt=""><input type="text" id="name-' + i + '" data-in="name" data-i="' + i + '" maxlength="40" value="' + esc(it.name) + '" aria-label="' + (i + 1) + '. kép neve">' +
+        '<div class="btns">' + (H.mode === "host" ? '<button class="icon" data-act="up" data-i="' + i + '" aria-label="Feljebb"' + (i === 0 ? " disabled" : "") + '>↑</button><button class="icon" data-act="down" data-i="' + i + '" aria-label="Lejjebb"' + (i === n - 1 ? " disabled" : "") + '>↓</button>' : "") + '<button class="icon danger" data-act="rm" data-i="' + i + '" aria-label="Törlés">✕</button></div></div>';
+    });
+    h += '</div>';
+    if (H.mode === "host") h += '<p class="small muted">A nyilakkal állítsd be a helyes sorrendet. Ezt a játékosok csak a végén látják.</p>';
+  }
+  const ps = playerList(HOSTPID).filter(p => p.pid !== HOSTPID);
+  h += '</section><section class="card"><h2>3. Játékosok (' + ps.length + ')</h2>' + shareBox() + chipsHTML(ps, 0, false, true) +
+    '<div class="row"><button class="primary big" data-act="start"' + (n < 3 || HU.busy ? " disabled" : "") + '>Játék indítása (' + n + ' kép)</button>' +
+    (n < 3 ? '<span class="small muted">Tölts fel legalább 3 képet.</span>' : "") + '</div></section>';
+  return h;
+}
+function hostPlayingHTML() {
+  const ps = playerList(HOSTPID);
+  const doneAll = ps.length > 0 && ps.every(p => p.done);
+  let h = '<section class="card"><div class="row" style="justify-content:space-between"><h2>Játék folyik</h2><span class="pill">' + (H.mode === "host" ? "A te sorrended a megoldás" : "A csapat átlaga a megoldás") + '</span></div>' + chipsHTML(ps, H.n, true);
+  if (HU.confirm === "reveal") h += '<div class="notice"><p>Még nem végzett mindenki. Ha most felfeded, a hiányzó képekre 0 pont jár.</p><div class="row"><button class="primary" data-act="reveal">Igen, felfedem</button><button data-act="cancel">Mégse</button></div></div>';
+  else h += '<div class="row"><button class="primary big" data-act="' + (doneAll ? "reveal" : "askreveal") + '">Eredmények felfedése</button>' + (doneAll ? '<span class="small muted">Mindenki végzett.</span>' : "") + '</div>';
+  h += '<details class="small"><summary class="muted">Valaki kimaradt? Itt a link</summary>' + shareBox() + '</details></section>';
+  if (H.players[HOSTPID]) h += playHTML(stateFor(HOSTPID), presImgs(), HU.sel, false);
+  return h;
+}
+function hostView() {
+  let body;
+  if (H.phase === "setup") body = hostSetupHTML();
+  else if (H.phase === "playing") body = hostPlayingHTML();
+  else {
+    body = revealHTML(stateFor(HOSTPID), presImgs()) + '<section class="card"><div class="row">' + (HU.confirm === "newgame"
+      ? '<span>Új kör indul: a mostani képek és eredmények törlődnek.</span><button class="primary" data-act="newgame">Rendben</button><button data-act="cancel">Mégse</button>'
+      : '<button class="primary big" data-act="asknew">Új játék</button><span class="small muted">A játékosok bent maradnak a szobában a következő körre is.</span>') + '</div></section>';
+  }
+  const warn = HU.saveWarn ? noteHTML("Figyelem: a böngésződ nem tudta elmenteni a képeket. Ha frissíted az oldalt, ebben a körben elvesznek.") : "";
+  return header(H.title, '<span class="pill">Te vagy a játékmester · ' + H.code + '</span>' + phasePill(H.phase)) + hostNetNote() + noteHTML(HU.err, true) + noteHTML(HU.busy) + warn + body;
+}
+
+/* ================= JÁTÉKOS ================= */
+let P = null, PT = null;
+function playerInit(code) {
+  if (TEST) { lsGet = k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } }; lsSet = (k, v) => { try { sessionStorage.setItem(k, v); return true; } catch (e) { return false; } }; }
+  let pid = lsGet("vt_pid_" + code);
+  if (!pid) { pid = "p" + rand(16, "abcdefghijklmnopqrstuvwxyz0123456789"); lsSet("vt_pid_" + code, pid); }
+  P = { code, pid, nick: lsGet("vt_nick") || "", status: "form", st: null, imgs: {}, gameNo: null, sel: null, err: "", busy: false, conn: null, retry: 0 };
+  if (lsGet("vt_joined_" + code) && P.nick) playerConnect();
+}
+function playerConnect() {
+  const nick = cleanNick(P.nick);
+  if (!nick) { P.err = "Írj be egy becenevet."; render(); return; }
+  lsSet("vt_nick", nick); P.err = ""; P.status = "connecting"; render();
+  if (PT) PT.destroy();
+  PT = clientTransport(P.code, {
+    open(c) { P.conn = c; P.retry = 0; lsSet("vt_joined_" + P.code, "1"); c.send({ t: "hello", pid: P.pid, nick }); },
+    data(m) {
+      if (!m || typeof m !== "object") return;
+      if (m.t === "state") {
+        if (m.gameNo !== P.gameNo) { Object.values(P.imgs).forEach(x => URL.revokeObjectURL(x.url)); P.imgs = {}; P.gameNo = m.gameNo; P.sel = null; }
+        if (P.st && P.st.phase !== m.phase) P.sel = null;
+        P.st = m; P.status = "in"; P.busy = false; render();
+      } else if (m.t === "img" && m.gameNo === P.gameNo && typeof m.data === "string") {
+        P.imgs[m.i] = { url: dataUrlToBlobUrl(m.data), name: String(m.name || "") }; render();
+      }
+    },
+    close() { if (P.status === "in" || P.status === "connecting") { P.status = "lost"; P.conn = null; render(); scheduleRetry(); } },
+    error(kind) {
+      if (kind === "nohost" || kind === "timeout") { P.status = P.st ? "lost" : "nohost"; render(); scheduleRetry(); }
+      else { P.status = "error"; P.err = kind === "nolib" ? "Nem töltött be a kapcsolódási modul. Ellenőrizd a netet, aztán frissítsd az oldalt." : kind === "browser" ? "Ez a böngésző nem támogatja a közvetlen kapcsolatot. Próbáld Chrome-ban, Firefoxban vagy Safariban." : "Nem sikerült kapcsolódni. Ellenőrizd a netet, aztán próbáld újra."; render(); }
+    }
+  });
+}
+let retryTimer = null;
+function scheduleRetry() {
+  clearTimeout(retryTimer);
+  if (P.retry > 40) return;
+  P.retry++;
+  retryTimer = setTimeout(() => { if (P.status !== "in") playerConnect(); }, Math.min(8000, 2000 + P.retry * 500));
+}
+function playerPlace() {
+  const st = P.st; if (!st || !P.conn || P.sel == null || P.busy) return;
+  const place = st.place; if (!place) return;
+  const k = place.indexOf(-1); if (k < 0 || place.includes(P.sel)) return;
+  P.busy = true;
+  P.conn.send({ t: "place", slot: P.sel });
+  P.sel = null; render();
+}
+function playerView() {
+  const st = P.st;
+  const title = st && st.title;
+  let body = "";
+  if (P.status === "form" || (P.status === "error" && !st)) {
+    body = '<section class="card" style="max-width:520px"><h2>Csatlakozás a(z) ' + esc(P.code) + ' szobához</h2><p class="muted">Add meg a beceneved. Ezt látja majd mindenki az eredménytáblán.</p>' +
+      '<div><label for="nick">Becenév</label><input type="text" id="nick" data-in="nick" maxlength="24" value="' + esc(P.nick) + '" placeholder="pl. Bence"></div>' +
+      '<div class="row"><button class="primary" data-act="join">Beszállok</button></div></section>';
+  } else if (P.status === "connecting" && !st) body = '<div class="center"><div class="spinner"></div><p class="muted">Kapcsolódás a játékmesterhez…</p></div>';
+  else if (P.status === "nohost") body = '<div class="center"><div class="spinner"></div><p><b>Nem találom a(z) ' + esc(P.code) + ' szobát.</b></p><p class="muted small">Lehet, hogy a játékmester még nem nyitotta meg, vagy bezárta a lapot. Folyamatosan próbálkozom, nem kell frissítened.</p></div>';
+  if (!body && st) {
+    const me = st.players.find(p => p.me);
+    if (st.phase === "setup") body = '<section class="card"><h2>Bent vagy, ' + esc(me ? me.nick : P.nick) + '!</h2><p class="muted">A játékmester most tölti fel a képeket. Amint elindítja, itt megjelenik az első kép.</p>' + tierLegend() + '</section><section class="card"><h3>Játékosok</h3>' + chipsHTML(st.players, 0, false) + '</section>';
+    else if (st.phase === "playing") body = st.place ? playHTML(st, P.imgs, P.sel, P.busy || P.status !== "in") : '<section class="card"><p>A kör már elindult nélküled. A következőben már te is benne leszel.</p></section>';
+    else body = revealHTML(st, P.imgs);
+  }
+  const lost = P.status === "lost" ? noteHTML("Megszakadt a kapcsolat a játékmesterrel. Újracsatlakozás… (a lerakott képeid megmaradnak)", true) : "";
+  return header(title, '<span class="pill">Szoba: ' + esc(P.code) + '</span>' + phasePill(st && st.phase)) + lost + noteHTML(P.err, true) + body;
+}
+
+/* ================= KEZDŐLAP ================= */
+function landingView() {
+  return header("", "") +
+    '<section class="card"><h2>Új játék</h2><p class="muted">Te leszel a játékmester: feltöltöd a képeket, és kapsz egy linket, amit elküldesz a többieknek. Nekik semmilyen regisztráció nem kell.</p><div class="row"><button class="primary big" data-act="create">Játék létrehozása</button></div></section>' +
+    '<section class="card" style="max-width:520px"><h2>Csatlakozás kóddal</h2><div><label for="code">Szobakód</label><input type="text" id="code" maxlength="8" placeholder="pl. LTR8" style="text-transform:uppercase"></div><div class="row"><button data-act="gocode">Tovább</button></div></section>' +
+    '<section class="card"><h3>Hogy működik?</h3><ol class="steps small"><li>A játékmester feltölt kb. 10 képet névvel.</li><li>Mindenki egyesével, véletlen sorrendben kapja a képeket, és mindegyiket berakja egy helyre az S–D tier listbe. Amit lerakott, már nem mozdul.</li><li>A végén kiderül, kinek a listája áll a legközelebb a tökéleteshez. Telitalálat 10 pont, 1 hely eltérés 7, 2 hely 4, 3 hely 2, 4 hely 1.</li></ol></section>';
+}
+
+/* ================= render + események ================= */
+let MODE = "landing";
+function view() { return MODE === "host" ? hostView() : MODE === "player" ? playerView() : landingView(); }
+function render() {
+  const a = document.activeElement, id = a && a.id;
+  let ss = null, se = null; try { ss = a.selectionStart; se = a.selectionEnd; } catch (e) {}
+  $app.innerHTML = view();
+  if (id) { const el = document.getElementById(id); if (el && el !== document.body) { el.focus({ preventScroll: true }); try { if (ss != null) el.setSelectionRange(ss, se); } catch (e) {} } }
+}
+function go(code) { location.href = shareLink(code); }
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
+  const act = b.dataset.act, i = +b.dataset.i;
+  if (act === "create") { MODE = "host"; hostCreate(); return; }
+  if (act === "gocode") { const c = (document.getElementById("code").value || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); if (c) go(c); return; }
+  if (act === "join") { playerConnect(); return; }
+  if (act === "sel") { if (MODE === "host") HU.sel = +b.dataset.p; else P.sel = +b.dataset.p; render(); return; }
+  if (act === "place") { if (MODE === "host") { const s = HU.sel; HU.sel = null; hostPlace(HOSTPID, s); } else playerPlace(); return; }
+  if (MODE !== "host") return;
+  const it = H.items;
+  if (act === "mode") { H.mode = b.value; hostSave(); render(); }
+  else if (act === "hostplays") { H.hostPlays = b.checked; hostSave(); render(); }
+  else if (act === "up" && i > 0) { [it[i - 1], it[i]] = [it[i], it[i - 1]]; HU.urls = {}; hostSave(); render(); }
+  else if (act === "down" && i < it.length - 1) { [it[i + 1], it[i]] = [it[i], it[i + 1]]; HU.urls = {}; hostSave(); render(); }
+  else if (act === "rm") { it.splice(i, 1); HU.urls = {}; hostSave(); render(); }
+  else if (act === "kick") { const pid = b.dataset.pid; if (HU.conns[pid]) { try { HU.conns[pid].close(); } catch (er) {} delete HU.conns[pid]; } delete H.players[pid]; broadcast(); }
+  else if (act === "start") hostStart();
+  else if (act === "askreveal") { HU.confirm = "reveal"; render(); }
+  else if (act === "reveal") hostReveal();
+  else if (act === "asknew") { HU.confirm = "newgame"; render(); }
+  else if (act === "newgame") hostNewGame();
+  else if (act === "cancel") { HU.confirm = ""; render(); }
+  else if (act === "copy") {
+    const link = shareLink(H.code);
+    const done = () => { HU.copied = true; render(); setTimeout(() => { HU.copied = false; render(); }, 2000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, () => { const el = document.getElementById("sharelink"); el.select(); try { document.execCommand("copy"); done(); } catch (er) {} });
+    else { const el = document.getElementById("sharelink"); el.select(); try { document.execCommand("copy"); done(); } catch (er) {} }
+  }
+});
+document.addEventListener("input", e => {
+  const t = e.target, k = t.dataset && t.dataset.in; if (!k) return;
+  if (k === "nick" && P) P.nick = t.value;
+  else if (k === "hnick") HU.nick = t.value;
+  else if (k === "title") { H.title = t.value; hostSave(); }
+  else if (k === "name") { const it = H.items[+t.dataset.i]; if (it) { it.name = t.value; hostSave(); } }
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  if (e.target.id === "nick") playerConnect();
+  if (e.target.id === "code") { const c = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); if (c) go(c); }
+});
+document.addEventListener("change", e => { if (e.target.id === "file" && MODE === "host") hostAddFiles(e.target.files); });
+document.addEventListener("dragover", e => { if (MODE === "host" && e.target.closest && e.target.closest(".drop")) { e.preventDefault(); if (!HU.dragOver) { HU.dragOver = true; render(); } } });
+document.addEventListener("dragleave", e => { if (HU.dragOver && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".drop"))) { HU.dragOver = false; render(); } });
+document.addEventListener("drop", e => { if (MODE === "host" && e.target.closest && e.target.closest(".drop")) { e.preventDefault(); HU.dragOver = false; hostAddFiles(e.dataTransfer.files); } });
+window.addEventListener("beforeunload", e => { if (MODE === "host" && H && H.phase === "playing") { e.preventDefault(); e.returnValue = ""; } });
+
+/* ================= indulás ================= */
+if (roomParam && lsGet("vt_hostroom") === roomParam && hostRestore(roomParam)) MODE = "host";
+else if (roomParam) { MODE = "player"; playerInit(roomParam); }
+render();
+})();
+
+</script>
+</body>
+</html>
