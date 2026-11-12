@@ -116,6 +116,31 @@ button.icon{padding:6px 10px;min-width:38px}
 @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
 .center{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:30px 10px}
 ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+
+.ranks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ranks.two{display:block;columns:2 280px;column-gap:10px}
+.ranks.two>li{break-inside:avoid;margin-bottom:6px}
+.ranks>li{display:block}
+.ranks>li.rrow{display:grid}
+.rrow{width:100%;display:grid;grid-template-columns:48px 56px 1fr auto;gap:10px;align-items:center;min-height:68px;padding:6px 10px 6px 6px;border-radius:12px;background:var(--bg);border:1px solid var(--line);text-align:left;font-weight:600;color:var(--text)}
+.rrow.empty{border-style:dashed;grid-template-columns:48px 1fr}
+.rrow.empty.sel{grid-template-columns:48px 56px 1fr}
+.rrow.pickable{cursor:pointer}
+.rrow.pickable:hover{border-color:var(--accent)}
+.rrow.sel{border:2px solid var(--accent);background:var(--surface2)}
+.rnum{font-family:var(--display);font-size:1.5rem;text-align:center;font-variant-numeric:tabular-nums;color:var(--muted)}
+.rrow.full .rnum{color:var(--text)}
+.rnum.gold,.rrow.full .rnum.gold{color:var(--accent)}
+.rthumb{width:56px;height:56px;border-radius:8px;overflow:hidden;background:var(--surface);display:flex;align-items:center;justify-content:center}
+.rthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.rthumb.ghost{opacity:.6}
+.rname{overflow-wrap:anywhere;line-height:1.25}
+.rpts{font-weight:800;font-size:.85rem;border-radius:8px;padding:2px 8px;color:#1b1526;font-variant-numeric:tabular-nums}
+.ranks.sm .rrow{min-height:44px;grid-template-columns:34px 38px 1fr auto;gap:8px;padding:4px 8px 4px 4px}
+.ranks.sm .rrow.empty{grid-template-columns:34px 1fr}
+.ranks.sm .rnum{font-size:1.05rem}
+.ranks.sm .rthumb{width:38px;height:38px}
+.ranks.sm .rname{font-size:.85rem}
 </style>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>if(!window.Peer&&location.search.indexOf("test=1")<0)document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');</script>
@@ -128,17 +153,18 @@ ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
 /* ================= alap ================= */
 const $app = document.getElementById("app");
 const PTS = [10,7,4,2,1];
-const TIERS = [["S","var(--s)"],["A","var(--a)"],["B","var(--b)"],["C","var(--c)"],["D","var(--d)"]];
 const MAX_ITEMS = 20;
 const PEER_PREFIX = "vaktierlist-v1-";
 const HOSTPID = "__host__";
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const tierOf = (p, n) => Math.min(4, Math.floor(p * 5 / n));
 const ptsFor = (p, c) => (p < 0 || c == null) ? 0 : (PTS[Math.abs(p - c)] || 0);
-let lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
-let lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+const pStore = () => (new URLSearchParams(location.search).get("test") === "1") ? sessionStorage : localStorage;
+const pGet = k => { try { return pStore().getItem(k); } catch (e) { return null; } };
+const pSet = (k, v) => { try { pStore().setItem(k, v); } catch (e) {} };
 const lsDel = k => { try { localStorage.removeItem(k); } catch (e) {} };
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const cleanNick = s => String(s || "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 24);
@@ -264,34 +290,29 @@ function boardHTML(o) {
   // o: n, imgs (index -> {url,name}), place (kép -> hely), correct, pick, sel, ghost, small
   const n = o.n, posItem = Array(n).fill(-1);
   (o.place || []).forEach((p, i) => { if (p >= 0) posItem[p] = i; });
-  let h = '<div class="board' + (o.small ? " sm" : "") + '">';
-  for (let t = 0; t < 5; t++) {
-    const ps = []; for (let p = 0; p < n; p++) if (tierOf(p, n) === t) ps.push(p);
-    if (!ps.length) continue;
-    h += '<div class="tier"><div class="lab" style="background:' + TIERS[t][1] + '">' + TIERS[t][0] + '</div><div class="slots">';
-    for (const p of ps) {
-      const it = posItem[p];
-      if (it >= 0) {
-        const im = o.imgs[it];
-        let badge = "";
-        if (o.correct) { const pt = ptsFor(p, o.correct[it]); const col = pt === 10 ? "var(--good)" : pt >= 4 ? "var(--accent)" : pt > 0 ? "var(--a)" : "var(--muted)"; badge = '<span class="pts" style="background:' + col + '">+' + pt + '</span>'; }
-        h += '<div class="slot full" title="' + esc(im ? im.name : "") + '"><span class="num">' + (p + 1) + '</span>' + (im ? '<img src="' + im.url + '" alt="' + esc(im.name) + '">' : '<div class="spinner"></div>') + (o.small ? "" : '<span class="cap">' + esc(im ? im.name : "") + '</span>') + badge + '</div>';
-      } else if (o.pick) {
-        const sel = o.sel === p;
-        const ghost = sel && o.ghost ? '<div class="ghost"><img src="' + o.ghost.url + '" alt=""></div>' : "";
-        h += '<button class="slot empty pickable' + (sel ? " sel" : "") + '" data-act="sel" data-p="' + p + '" aria-label="' + (p + 1) + '. hely">' + ghost + '<span class="num">' + (p + 1) + '</span></button>';
-      } else h += '<div class="slot empty"><span class="num">' + (p + 1) + '</span></div>';
-    }
-    h += '</div></div>';
+  let h = '<ol class="ranks' + (o.small ? " sm" : "") + (n > 6 && !o.small ? " two" : "") + '">';
+  for (let p = 0; p < n; p++) {
+    const it = posItem[p], num = '<span class="rnum' + (p === 0 ? " gold" : "") + '">' + (p + 1) + '.</span>';
+    if (it >= 0) {
+      const im = o.imgs[it];
+      let badge = "";
+      if (o.correct) { const pt = ptsFor(p, o.correct[it]); const col = pt === 10 ? "var(--good)" : pt >= 4 ? "var(--accent)" : pt > 0 ? "var(--a)" : "var(--muted)"; badge = '<span class="rpts" style="background:' + col + '">+' + pt + '</span>'; }
+      h += '<li class="rrow full">' + num + '<span class="rthumb">' + (im ? '<img src="' + im.url + '" alt="">' : '<span class="spinner"></span>') + '</span><span class="rname">' + esc(im ? im.name : "") + '</span>' + badge + '</li>';
+    } else if (o.pick) {
+      const sel = o.sel === p;
+      const inner = sel && o.ghost ? '<span class="rthumb ghost"><img src="' + o.ghost.url + '" alt=""></span><span class="rname muted">' + esc(o.ghost.name) + '?</span>' : '<span class="rname muted">üres hely</span>';
+      h += '<li><button class="rrow empty pickable' + (sel ? " sel" : "") + '" data-act="sel" data-p="' + p + '" aria-label="' + (p + 1) + '. hely">' + num + inner + '</button></li>';
+    } else h += '<li class="rrow empty">' + num + '<span class="rname muted">üres</span></li>';
   }
-  return h + '</div>';
+  return h + '</ol>';
 }
 function chipsHTML(players, n, showProgress, kick) {
   if (!players.length) return '<p class="muted">Még senki nem csatlakozott.</p>';
   return '<div class="chips">' + players.map(p => {
     const prog = showProgress && n ? '<span class="bar"><i style="width:' + Math.round(100 * (p.progress || 0) / n) + '%"></i></span><span class="small muted">' + (p.progress || 0) + "/" + n + '</span>' : "";
     const off = p.online ? "" : ' <span class="small muted">(nincs kapcsolat)</span>';
-    const k = kick && p.pid && p.pid !== HOSTPID ? ' <button class="icon danger" style="padding:0 6px;min-width:0" data-act="kick" data-pid="' + esc(p.pid) + '" aria-label="' + esc(p.nick) + ' eltávolítása">✕</button>' : "";
+    const crown = kick && p.pid && p.pid !== HOSTPID && p.online ? ' <button class="icon" style="padding:0 6px;min-width:0" data-act="crown" data-pid="' + esc(p.pid) + '" title="Legyen ő a játékmester" aria-label="' + esc(p.nick) + ' legyen a játékmester">👑</button>' : "";
+    const k = kick && p.pid && p.pid !== HOSTPID ? crown + ' <button class="icon danger" style="padding:0 6px;min-width:0" data-act="kick" data-pid="' + esc(p.pid) + '" aria-label="' + esc(p.nick) + ' eltávolítása">✕</button>' : "";
     return '<span class="chip' + (p.done && showProgress ? " done" : "") + (p.me ? " me" : "") + '">' + esc(p.nick) + prog + (p.done && showProgress ? " ✓" : "") + off + k + '</span>';
   }).join("") + '</div>';
 }
@@ -306,8 +327,8 @@ function playHTML(st, imgs, sel, busy) {
   const n = st.n, place = st.place || Array(n).fill(-1), k = place.indexOf(-1);
   const players = st.players;
   if (k < 0) {
-    return '<section class="card"><h2>Kész vagy!</h2><p class="muted">A tier listed le van zárva. Várjuk, hogy a többiek is végezzenek, aztán a játékmester felfedi az eredményt.</p>' + chipsHTML(players, n, true) + '</section>' +
-      '<section class="card"><h3>A te tier listed</h3>' + boardHTML({ n, imgs, place }) + '</section>';
+    return '<section class="card"><h2>Kész vagy!</h2><p class="muted">A sorrended le van zárva. Várjuk, hogy a többiek is végezzenek, aztán a játékmester felfedi az eredményt.</p>' + chipsHTML(players, n, true) + '</section>' +
+      '<section class="card"><h3>A te sorrended</h3>' + boardHTML({ n, imgs, place }) + '</section>';
   }
   const im = imgs[k];
   const selOk = sel != null && !place.includes(sel);
@@ -322,20 +343,20 @@ function playHTML(st, imgs, sel, busy) {
 function revealHTML(st, imgs) {
   const n = st.n, res = st.results || [], max = n * 10;
   let h = '<section class="card"><h2>Eredménytábla</h2>';
-  if (!res.length) h += '<p class="muted">Senki nem adott le tier listet.</p>';
+  if (!res.length) h += '<p class="muted">Senki nem adott le sorrendet.</p>';
   else {
     h += '<div class="lead">';
     let lastScore = null, lastPos = 0;
     res.forEach((r, i) => {
       const pos = r.score === lastScore ? lastPos : i + 1; lastScore = r.score; lastPos = pos;
-      h += '<div class="lrow' + (pos === 1 ? " first" : "") + '"><span class="pos">' + pos + '.</span><div><b>' + esc(r.nick) + (r.me ? " (te)" : "") + '</b><div class="sub">' + r.exact + ' telitalálat · ' + r.tierHits + ' jó tier' + (r.done ? "" : " · nem fejezte be") + '</div></div><span class="sc">' + r.score + '<span class="small muted"> / ' + max + '</span></span></div>';
+      h += '<div class="lrow' + (pos === 1 ? " first" : "") + '"><span class="pos">' + pos + '.</span><div><b>' + esc(r.nick) + (r.me ? " (te)" : "") + '</b><div class="sub">' + r.exact + ' telitalálat · ' + r.tierHits + ' majdnem (±1 hely)' + (r.done ? "" : " · nem fejezte be") + '</div></div><span class="sc">' + r.score + '<span class="small muted"> / ' + max + '</span></span></div>';
     });
     h += '</div>';
   }
   h += tierLegend() + '</section>';
-  h += '<section class="card"><div class="row" style="justify-content:space-between"><h2>A tökéletes tier list</h2><span class="pill">' + (st.mode === "host" ? "a játékmester szerint" : "a csapat átlaga szerint") + '</span></div>' + boardHTML({ n, imgs, place: st.correct || [] }) + '</section>';
+  h += '<section class="card"><div class="row" style="justify-content:space-between"><h2>A tökéletes sorrend</h2><span class="pill">' + (st.mode === "host" ? "a játékmester szerint" : "a csapat átlaga szerint") + '</span></div>' + boardHTML({ n, imgs, place: st.correct || [] }) + '</section>';
   if (res.length) {
-    h += '<section class="card"><h2>Mindenki tier listje</h2><p class="small muted">A sarokban a képre kapott pont.</p><div class="players-results">';
+    h += '<section class="card"><h2>Mindenki sorrendje</h2><p class="small muted">Jobb oldalt a képre kapott pont.</p><div class="players-results">';
     res.forEach(r => { h += '<div class="card" style="padding:14px;background:var(--bg)"><div class="row" style="justify-content:space-between"><h3>' + esc(r.nick) + (r.me ? " (te)" : "") + '</h3><b class="counter">' + r.score + ' pont</b></div>' + boardHTML({ n, imgs, place: r.place, correct: st.correct, small: true }) + '</div>'; });
     h += '</div></section>';
   }
@@ -343,7 +364,7 @@ function revealHTML(st, imgs) {
 }
 
 /* ================= HOST ================= */
-let H = null, HT = null, HU = { sel: null, busy: "", err: "", net: "", confirm: "", dragOver: false, urls: {}, conns: {}, sent: {}, nick: lsGet("vt_nick") || "", saveWarn: false };
+let H = null, HT = null, HU = { sel: null, busy: "", err: "", net: "", confirm: "", dragOver: false, urls: {}, conns: {}, sent: {}, nick: pGet("vt_nick") || "", saveWarn: false };
 
 function hostSaveKey(code) { return "vt_host_" + code; }
 let saveTimer = null;
@@ -406,6 +427,8 @@ function hostOnConn(c) {
       if (!p) { p = H.players[pid] = { nick, at: Date.now(), place: H.phase === "playing" ? Array(H.n).fill(-1) : null, done: false }; }
       p.nick = nick;
       broadcast();
+    } else if (m.t === "newroom" && pid && HU.handoverTo === pid && /^[A-Z0-9]{4,8}$/.test(String(m.code))) {
+      hostFinishHandover(String(m.code));
     } else if (m.t === "place" && pid && HU.conns[pid] === c) {
       hostPlace(pid, m.slot);
     }
@@ -434,7 +457,7 @@ function hostStartNet() {
 function hostCreate() {
   const code = rand(4, CODE_CHARS);
   H = { code, phase: "setup", title: "", mode: "host", hostPlays: false, items: [], pres: [], n: 0, gameNo: 1, players: {}, correct: null, results: null };
-  lsSet("vt_hostroom", code);
+  pSet("vt_hostroom", code);
   history.replaceState(null, "", shareLink(code));
   hostSave(); hostStartNet(); render();
 }
@@ -463,7 +486,7 @@ function hostStart() {
   if (H.items.some(it => !it.name.trim())) { HU.err = "Minden képnek adj nevet."; render(); return; }
   if (H.mode === "avg" && H.hostPlays) {
     const nick = cleanNick(HU.nick); if (!nick) { HU.err = "Ha te is játszol, adj meg becenevet."; render(); return; }
-    lsSet("vt_nick", nick);
+    pSet("vt_nick", nick);
     H.players[HOSTPID] = { nick, at: 0, place: null, done: false };
   } else delete H.players[HOSTPID];
   HU.err = "";
@@ -489,7 +512,7 @@ function hostReveal() {
   }
   H.results = subs.map(s => {
     let score = 0, exact = 0, tierHits = 0;
-    s.place.forEach((p, i) => { if (p < 0) return; score += ptsFor(p, correct[i]); if (p === correct[i]) exact++; if (tierOf(p, n) === tierOf(correct[i], n)) tierHits++; });
+    s.place.forEach((p, i) => { if (p < 0) return; score += ptsFor(p, correct[i]); if (p === correct[i]) exact++; if (Math.abs(p - correct[i]) === 1) tierHits++; });
     return { pid: s.pid, nick: s.nick, place: s.place.slice(), score, exact, tierHits, done: !!s.done };
   }).sort((a, b) => b.score - a.score || b.exact - a.exact || b.tierHits - a.tierHits);
   H.phase = "reveal"; HU.err = "";
@@ -502,6 +525,31 @@ function hostNewGame() {
   broadcast();
 }
 
+function hostHandover(pid) {
+  const nick = cleanNick(HU.nick);
+  if (!nick) { HU.err = "Add meg a beceneved, hogy játékosként folytathasd."; render(); return; }
+  const c = HU.conns[pid]; if (!c) { HU.err = "Ez a játékos most nincs kapcsolatban."; render(); return; }
+  pSet("vt_nick", nick); HU.err = ""; HU.confirm = "";
+  HU.handoverTo = pid; HU.busy = "Átadás folyamatban…"; render();
+  try { c.send({ t: "becomehost" }); } catch (e) {}
+  clearTimeout(HU.hoTimer);
+  HU.hoTimer = setTimeout(() => { if (HU.handoverTo === pid) { HU.handoverTo = null; HU.busy = ""; HU.err = "Az átadás nem sikerült, mert a játékos nem válaszolt. Próbáld újra."; render(); } }, 15000);
+}
+function hostFinishHandover(code) {
+  clearTimeout(HU.hoTimer);
+  Object.entries(HU.conns).forEach(([id, c]) => { if (id !== HU.handoverTo) { try { c.send({ t: "moveto", code }); } catch (e) {} } });
+  pSet("vt_joined_" + code, "1"); pSet("vt_hostroom", "");
+  lsDel(hostSaveKey(H.code));
+  HU.busy = "Átköltözés az új játékmester szobájába…"; render();
+  setTimeout(() => { if (HT) HT.destroy(); location.href = shareLink(code); }, 700);
+}
+function handoverBox() {
+  if (!HU.confirm.startsWith("crown:")) return "";
+  const pid = HU.confirm.slice(6), p = H.players[pid]; if (!p) return "";
+  return '<div class="notice"><p><b>' + esc(p.nick) + '</b> lesz az új játékmester. Mindenki átkerül az ő szobájába, te pedig játékosként folytatod.</p>' +
+    '<div><label for="nick-ho">A te beceneved játékosként</label><input type="text" id="nick-ho" data-in="hnick" maxlength="24" value="' + esc(HU.nick) + '"></div>' +
+    '<div class="row"><button class="primary" data-act="handover" data-pid="' + esc(pid) + '">Átadom</button><button data-act="cancel">Mégse</button></div></div>';
+}
 function hostNetNote() {
   const k = HU.net;
   if (k === "ok") return "";
@@ -523,7 +571,7 @@ function shareBox() {
 function hostSetupHTML() {
   const n = H.items.length;
   let h = '<section class="card"><h2>1. Játék beállítása</h2>' +
-    '<div><label for="title">A tier list témája</label><input type="text" id="title" data-in="title" maxlength="60" placeholder="pl. A legjobb magyar kajak" value="' + esc(H.title) + '"></div>' +
+    '<div><label for="title">A játék témája</label><input type="text" id="title" data-in="title" maxlength="60" placeholder="pl. A legjobb magyar kajak" value="' + esc(H.title) + '"></div>' +
     '<div class="choice" role="radiogroup">' +
     '<label class="' + (H.mode === "host" ? "on" : "") + '"><input type="radio" name="mode" data-act="mode" value="host"' + (H.mode === "host" ? " checked" : "") + '><span><b>Én adom meg a helyes sorrendet</b><span class="small muted">Lent a lista sorrendje a megoldás: fent az 1. hely. A játékosok ehhez mérődnek.</span></span></label>' +
     '<label class="' + (H.mode === "avg" ? "on" : "") + '"><input type="radio" name="mode" data-act="mode" value="avg"' + (H.mode === "avg" ? " checked" : "") + '><span><b>A csapat átlaga a helyes</b><span class="small muted">Az nyer, aki a legjobban eltalálja, mit gondol a társaság. Ilyenkor te is játszhatsz.</span></span></label></div>';
@@ -536,8 +584,8 @@ function hostSetupHTML() {
   if (n) {
     h += '<div class="items">';
     H.items.forEach((it, i) => {
-      const t = tierOf(i, n), u = hostUrl("i", i);
-      const rank = H.mode === "host" ? '<span class="rank" style="background:' + TIERS[t][1] + '">#' + (i + 1) + " " + TIERS[t][0] + '</span>' : '<span class="rank" style="background:var(--surface2);color:var(--muted)">' + (i + 1) + '</span>';
+      const u = hostUrl("i", i);
+      const rank = H.mode === "host" ? '<span class="rank" style="background:var(--accent)">#' + (i + 1) + '</span>' : '<span class="rank" style="background:var(--surface2);color:var(--muted)">' + (i + 1) + '</span>';
       h += '<div class="item">' + rank + '<img src="' + (u ? u.url : "") + '" alt=""><input type="text" id="name-' + i + '" data-in="name" data-i="' + i + '" maxlength="40" value="' + esc(it.name) + '" aria-label="' + (i + 1) + '. kép neve">' +
         '<div class="btns">' + (H.mode === "host" ? '<button class="icon" data-act="up" data-i="' + i + '" aria-label="Feljebb"' + (i === 0 ? " disabled" : "") + '>↑</button><button class="icon" data-act="down" data-i="' + i + '" aria-label="Lejjebb"' + (i === n - 1 ? " disabled" : "") + '>↓</button>' : "") + '<button class="icon danger" data-act="rm" data-i="' + i + '" aria-label="Törlés">✕</button></div></div>';
     });
@@ -545,7 +593,7 @@ function hostSetupHTML() {
     if (H.mode === "host") h += '<p class="small muted">A nyilakkal állítsd be a helyes sorrendet. Ezt a játékosok csak a végén látják.</p>';
   }
   const ps = playerList(HOSTPID).filter(p => p.pid !== HOSTPID);
-  h += '</section><section class="card"><h2>3. Játékosok (' + ps.length + ')</h2>' + shareBox() + chipsHTML(ps, 0, false, true) +
+  h += '</section><section class="card"><h2>3. Játékosok (' + ps.length + ')</h2>' + shareBox() + chipsHTML(ps, 0, false, true) + (ps.length ? '<p class="small muted">A 👑 gombbal átadhatod a játékmesteri szerepet valakinek.</p>' : "") + handoverBox() +
     '<div class="row"><button class="primary big" data-act="start"' + (n < 3 || HU.busy ? " disabled" : "") + '>Játék indítása (' + n + ' kép)</button>' +
     (n < 3 ? '<span class="small muted">Tölts fel legalább 3 képet.</span>' : "") + '</div></section>';
   return h;
@@ -567,7 +615,8 @@ function hostView() {
   else {
     body = revealHTML(stateFor(HOSTPID), presImgs()) + '<section class="card"><div class="row">' + (HU.confirm === "newgame"
       ? '<span>Új kör indul: a mostani képek és eredmények törlődnek.</span><button class="primary" data-act="newgame">Rendben</button><button data-act="cancel">Mégse</button>'
-      : '<button class="primary big" data-act="asknew">Új játék</button><span class="small muted">A játékosok bent maradnak a szobában a következő körre is.</span>') + '</div></section>';
+      : '<button class="primary big" data-act="asknew">Új játék</button><span class="small muted">A játékosok bent maradnak a szobában a következő körre is.</span>') + '</div>' +
+      '<h3>Következő kör más játékmesterrel?</h3><p class="small muted">Kattints a 👑 gombra annál, aki legyen a következő játékmester.</p>' + chipsHTML(playerList(HOSTPID).filter(p => p.pid !== HOSTPID), 0, false, true) + handoverBox() + '</section>';
   }
   const warn = HU.saveWarn ? noteHTML("Figyelem: a böngésződ nem tudta elmenteni a képeket. Ha frissíted az oldalt, ebben a körben elvesznek.") : "";
   return header(H.title, '<span class="pill">Te vagy a játékmester · ' + H.code + '</span>' + phasePill(H.phase)) + hostNetNote() + noteHTML(HU.err, true) + noteHTML(HU.busy) + warn + body;
@@ -576,25 +625,34 @@ function hostView() {
 /* ================= JÁTÉKOS ================= */
 let P = null, PT = null;
 function playerInit(code) {
-  if (TEST) { lsGet = k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } }; lsSet = (k, v) => { try { sessionStorage.setItem(k, v); return true; } catch (e) { return false; } }; }
-  let pid = lsGet("vt_pid_" + code);
-  if (!pid) { pid = "p" + rand(16, "abcdefghijklmnopqrstuvwxyz0123456789"); lsSet("vt_pid_" + code, pid); }
-  P = { code, pid, nick: lsGet("vt_nick") || "", status: "form", st: null, imgs: {}, gameNo: null, sel: null, err: "", busy: false, conn: null, retry: 0 };
-  if (lsGet("vt_joined_" + code) && P.nick) playerConnect();
+  let pid = pGet("vt_pid_" + code);
+  if (!pid) { pid = "p" + rand(16, "abcdefghijklmnopqrstuvwxyz0123456789"); pSet("vt_pid_" + code, pid); }
+  P = { code, pid, nick: pGet("vt_nick") || "", status: "form", st: null, imgs: {}, gameNo: null, sel: null, err: "", busy: false, conn: null, retry: 0 };
+  if (pGet("vt_joined_" + code) && P.nick) playerConnect();
 }
 function playerConnect() {
   const nick = cleanNick(P.nick);
   if (!nick) { P.err = "Írj be egy becenevet."; render(); return; }
-  lsSet("vt_nick", nick); P.err = ""; P.status = "connecting"; render();
+  pSet("vt_nick", nick); P.err = ""; P.status = "connecting"; render();
   if (PT) PT.destroy();
   PT = clientTransport(P.code, {
-    open(c) { P.conn = c; P.retry = 0; lsSet("vt_joined_" + P.code, "1"); c.send({ t: "hello", pid: P.pid, nick }); },
+    open(c) { P.conn = c; P.retry = 0; pSet("vt_joined_" + P.code, "1"); c.send({ t: "hello", pid: P.pid, nick }); },
     data(m) {
       if (!m || typeof m !== "object") return;
       if (m.t === "state") {
         if (m.gameNo !== P.gameNo) { Object.values(P.imgs).forEach(x => URL.revokeObjectURL(x.url)); P.imgs = {}; P.gameNo = m.gameNo; P.sel = null; }
         if (P.st && P.st.phase !== m.phase) P.sel = null;
         P.st = m; P.status = "in"; P.busy = false; render();
+      } else if (m.t === "becomehost") {
+        const code = rand(4, CODE_CHARS);
+        const fresh = { code, phase: "setup", title: "", mode: "host", hostPlays: false, items: [], pres: [], n: 0, gameNo: 1, players: {}, correct: null, results: null };
+        lsSet("vt_host_" + code, JSON.stringify(fresh)); pSet("vt_hostroom", code);
+        try { P.conn.send({ t: "newroom", code }); } catch (e) {}
+        P.status = "moving"; render();
+        setTimeout(() => { if (PT) PT.destroy(); location.href = shareLink(code); }, 500);
+      } else if (m.t === "moveto" && /^[A-Z0-9]{4,8}$/.test(String(m.code))) {
+        pSet("vt_joined_" + m.code, "1"); P.status = "moving"; render();
+        setTimeout(() => { if (PT) PT.destroy(); location.href = shareLink(m.code); }, 300);
       } else if (m.t === "img" && m.gameNo === P.gameNo && typeof m.data === "string") {
         P.imgs[m.i] = { url: dataUrlToBlobUrl(m.data), name: String(m.name || "") }; render();
       }
@@ -637,6 +695,7 @@ function playerView() {
     else if (st.phase === "playing") body = st.place ? playHTML(st, P.imgs, P.sel, P.busy || P.status !== "in") : '<section class="card"><p>A kör már elindult nélküled. A következőben már te is benne leszel.</p></section>';
     else body = revealHTML(st, P.imgs);
   }
+  if (P.status === "moving") return header(title, "") + '<div class="center"><div class="spinner"></div><p class="muted">Új játékmester, átköltözünk az új szobába…</p></div>';
   const lost = P.status === "lost" ? noteHTML("Megszakadt a kapcsolat a játékmesterrel. Újracsatlakozás… (a lerakott képeid megmaradnak)", true) : "";
   return header(title, '<span class="pill">Szoba: ' + esc(P.code) + '</span>' + phasePill(st && st.phase)) + lost + noteHTML(P.err, true) + body;
 }
@@ -646,7 +705,7 @@ function landingView() {
   return header("", "") +
     '<section class="card"><h2>Új játék</h2><p class="muted">Te leszel a játékmester: feltöltöd a képeket, és kapsz egy linket, amit elküldesz a többieknek. Nekik semmilyen regisztráció nem kell.</p><div class="row"><button class="primary big" data-act="create">Játék létrehozása</button></div></section>' +
     '<section class="card" style="max-width:520px"><h2>Csatlakozás kóddal</h2><div><label for="code">Szobakód</label><input type="text" id="code" maxlength="8" placeholder="pl. LTR8" style="text-transform:uppercase"></div><div class="row"><button data-act="gocode">Tovább</button></div></section>' +
-    '<section class="card"><h3>Hogy működik?</h3><ol class="steps small"><li>A játékmester feltölt kb. 10 képet névvel.</li><li>Mindenki egyesével, véletlen sorrendben kapja a képeket, és mindegyiket berakja egy helyre az S–D tier listbe. Amit lerakott, már nem mozdul.</li><li>A végén kiderül, kinek a listája áll a legközelebb a tökéleteshez. Telitalálat 10 pont, 1 hely eltérés 7, 2 hely 4, 3 hely 2, 4 hely 1.</li></ol></section>';
+    '<section class="card"><h3>Hogy működik?</h3><ol class="steps small"><li>A játékmester feltölt kb. 10 képet névvel.</li><li>Mindenki egyesével, véletlen sorrendben kapja a képeket, és mindegyiket berakja egy helyre az 1-től N-ig tartó rangsorba. Amit lerakott, már nem mozdul.</li><li>A végén kiderül, kinek a listája áll a legközelebb a tökéleteshez. Telitalálat 10 pont, 1 hely eltérés 7, 2 hely 4, 3 hely 2, 4 hely 1.</li></ol></section>';
 }
 
 /* ================= render + események ================= */
@@ -675,6 +734,8 @@ document.addEventListener("click", e => {
   else if (act === "up" && i > 0) { [it[i - 1], it[i]] = [it[i], it[i - 1]]; HU.urls = {}; hostSave(); render(); }
   else if (act === "down" && i < it.length - 1) { [it[i + 1], it[i]] = [it[i], it[i + 1]]; HU.urls = {}; hostSave(); render(); }
   else if (act === "rm") { it.splice(i, 1); HU.urls = {}; hostSave(); render(); }
+  else if (act === "crown") { HU.confirm = "crown:" + b.dataset.pid; render(); }
+  else if (act === "handover") hostHandover(b.dataset.pid);
   else if (act === "kick") { const pid = b.dataset.pid; if (HU.conns[pid]) { try { HU.conns[pid].close(); } catch (er) {} delete HU.conns[pid]; } delete H.players[pid]; broadcast(); }
   else if (act === "start") hostStart();
   else if (act === "askreveal") { HU.confirm = "reveal"; render(); }
@@ -708,7 +769,7 @@ document.addEventListener("drop", e => { if (MODE === "host" && e.target.closest
 window.addEventListener("beforeunload", e => { if (MODE === "host" && H && H.phase === "playing") { e.preventDefault(); e.returnValue = ""; } });
 
 /* ================= indulás ================= */
-if (roomParam && lsGet("vt_hostroom") === roomParam && hostRestore(roomParam)) MODE = "host";
+if (roomParam && pGet("vt_hostroom") === roomParam && hostRestore(roomParam)) MODE = "host";
 else if (roomParam) { MODE = "player"; playerInit(roomParam); }
 render();
 })();
